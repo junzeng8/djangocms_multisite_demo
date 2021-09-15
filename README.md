@@ -140,11 +140,48 @@ python deploy/run_two_site.sh
 ```
 ./deploy/run_nginx.sh
 ```
+nginx will listen on port 80 on two server_name, the main config in dango.conf is
+```
+server {
+    listen       80;
+    server_name  www.myblog.com;
+    location /static/ {
+        alias /data/static/;
+    }
+    location / {
+        proxy_pass http://10.12.169.29:8001; ### replace 10.12.169.29 with your host ip address
+    }
+}
+
+server {
+    listen       80;
+    server_name  www.yourblog.com;
+    location /static/ {
+        alias /data/static/;
+    }
+    location / {
+        proxy_pass http://10.12.169.29:8002; ### replace 10.12.169.29 with your host ip address
+    }
+}
+```
 ##### 2.9 add item to host file
-add following items to /etc/hosts
+add the following items to file /etc/hosts
 ```
 127.0.0.1 www.myblog.com
 127.0.0.1 www.yourblog.com
 ```
 #### 2.10 finished
 visit your site with browser!
+
+
+#### 3 how multisite works
+in djangocms_multisite middleware, it searchs urlconf by host name:
+```python
+class CMSMultiSiteMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        MULTISITE_CMS_URLS = getattr(settings, 'MULTISITE_CMS_URLS', {})
+        parsed = urlparse.urlparse(request.build_absolute_uri())
+        host = parsed.hostname.split(':')[0]
+        urlconf = MULTISITE_CMS_URLS[host]
+        request.urlconf = urlconf
+```
